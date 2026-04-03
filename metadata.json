@@ -1,5 +1,5 @@
 {
-  "name": "Maruthi HR",
+  "name": "Enterprise HR Payroll",
   "description": "A full-stack multi-tenant HR & Payroll SaaS platform featuring AI resume parsing, custom database-driven authentication, and automated document generation for payslips and receipts.",
   "requestFramePermissions": []
 }

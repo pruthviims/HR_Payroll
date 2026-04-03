@@ -84,7 +84,7 @@ async function startServer() {
         });
       }
 
-      res.json({ id: 'master', name: 'Maruthi HR Central', databaseId: '(default)' });
+      res.json({ id: 'master', name: 'HR Payroll Central', databaseId: '(default)' });
     });
 
     // 2. Custom Auth: Login

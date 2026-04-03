@@ -16,6 +16,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
   const [password, setPassword] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -28,14 +29,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlCompanyId = params.get('companyId');
-    if (urlCompanyId) {
-      setCompanyId(urlCompanyId);
-      console.log(`[LOGIN] URL Company ID detected: ${urlCompanyId}. Fetching logo...`);
-      // Fetch company logo if companyId is present
-      cloudApi.fetchLogo(urlCompanyId).then(logo => {
+    const lastCompanyId = localStorage.getItem('last_company_id');
+    const effectiveCompanyId = urlCompanyId || lastCompanyId;
+
+    if (effectiveCompanyId) {
+      setCompanyId(effectiveCompanyId);
+      console.log(`[LOGIN] Company ID detected: ${effectiveCompanyId}. Fetching branding...`);
+      
+      // Fetch company logo
+      cloudApi.fetchLogo(effectiveCompanyId).then(logo => {
         console.log(`[LOGIN] fetchLogo returned: ${logo ? 'logo data' : 'null'}`);
         if (logo) setCompanyLogo(logo);
-        else setCompanyLogo(null); // Explicitly clear if null
+        else setCompanyLogo(null);
+      });
+
+      // Fetch company name
+      cloudApi.fetchCompanyName(effectiveCompanyId).then(name => {
+        console.log(`[LOGIN] fetchCompanyName returned: ${name || 'null'}`);
+        if (name) setTenantName(name);
+        else setTenantName(null);
       });
     }
   }, []);
@@ -148,8 +160,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
               referrerPolicy="no-referrer"
             />
           </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Maruthi Staff Portal</h1>
-          <p className="text-gray-500 text-sm mt-2 font-medium">Secure HR Portal Gateway</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">{tenantName || "Staff Portal"}</h1>
+          <p className="text-gray-500 text-sm mt-2 font-medium">{tenantName ? "Secure Tenant Access" : "Secure HR Portal Gateway"}</p>
         </div>
 
         {lockoutTime > 0 ? (

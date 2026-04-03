@@ -49,7 +49,9 @@ export const Setup: React.FC<SetupProps> = ({ onBack, onSuccess }) => {
     setIsSubmitting(true);
     try {
       console.log("[SETUP-UI] Form submitted. Initiating setup sequence...");
-      await cloudApi.setupAdmin(companyId.trim(), email.trim(), password, secret.trim());
+      const trimmedId = companyId.trim();
+      await cloudApi.setupAdmin(trimmedId, email.trim(), password, secret.trim());
+      localStorage.setItem('last_company_id', trimmedId);
       console.log("[SETUP-UI] Setup successful! Redirecting...");
       onSuccess();
     } catch (err: any) {
@@ -67,7 +69,7 @@ export const Setup: React.FC<SetupProps> = ({ onBack, onSuccess }) => {
           <div className="p-5 bg-indigo-600 rounded-[2rem] text-white shadow-xl shadow-indigo-200 mb-6">
             <Lock size={32} />
           </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight text-center">Maruthi Security Setup</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight text-center">HR Portal Security Setup</h1>
           <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-2">Secure your payroll portal</p>
         </div>
 
