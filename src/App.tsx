@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Building2,
   Camera,
-  ShieldAlert,
   Lock,
   Plus,
   Briefcase,
@@ -71,7 +70,7 @@ const App: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string>('ENTERPRISE HR SOLUTIONS');
+  const [companyName, setCompanyName] = useState<string>('MARUTHI HR SOLUTIONS');
   const [favicon, setFavicon] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ lastSynced: null, isSyncing: false, status: 'offline' });
   

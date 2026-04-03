@@ -126,6 +126,11 @@ async function startServer() {
       app.get('/payroll', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });
+
+      // Redirect root to /payroll
+      app.get('/', (req, res) => {
+        res.redirect('/payroll/');
+      });
     }
 
     app.listen(PORT, "0.0.0.0", () => {

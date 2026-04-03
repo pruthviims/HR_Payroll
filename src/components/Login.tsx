@@ -148,7 +148,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
               referrerPolicy="no-referrer"
             />
           </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Staff Access Portal</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Maruthi Staff Portal</h1>
           <p className="text-gray-500 text-sm mt-2 font-medium">Secure HR Portal Gateway</p>
         </div>
 
