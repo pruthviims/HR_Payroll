@@ -15,6 +15,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [companyId, setCompanyId] = useState('');
+  const [isCompanyLocked, setIsCompanyLocked] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -29,28 +30,38 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlCompanyId = params.get('companyId');
-    const lastCompanyId = localStorage.getItem('last_company_id');
-    const effectiveCompanyId = urlCompanyId || lastCompanyId;
-
-    if (effectiveCompanyId) {
-      setCompanyId(effectiveCompanyId);
-      console.log(`[LOGIN] Company ID detected: ${effectiveCompanyId}. Fetching branding...`);
-      
-      // Fetch company logo
-      cloudApi.fetchLogo(effectiveCompanyId).then(logo => {
-        console.log(`[LOGIN] fetchLogo returned: ${logo ? 'logo data' : 'null'}`);
-        if (logo) setCompanyLogo(logo);
-        else setCompanyLogo(null);
-      });
-
-      // Fetch company name
-      cloudApi.fetchCompanyName(effectiveCompanyId).then(name => {
-        console.log(`[LOGIN] fetchCompanyName returned: ${name || 'null'}`);
-        if (name) setTenantName(name);
-        else setTenantName(null);
-      });
+    
+    if (urlCompanyId) {
+      setCompanyId(urlCompanyId);
+      setIsCompanyLocked(true);
     }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Branding fetch logic when companyId changes
+      if (companyId && companyId.trim().length > 2) {
+        const slugifiedId = companyId.toLowerCase().trim().replace(/\s+/g, '_');
+        
+        // Fetch company logo
+        cloudApi.fetchLogo(slugifiedId).then(logo => {
+          if (logo) setCompanyLogo(logo);
+          else setCompanyLogo(null);
+        });
+
+        // Fetch company name
+        cloudApi.fetchCompanyName(slugifiedId).then(name => {
+          if (name) setTenantName(name);
+          else setTenantName(null);
+        });
+      } else {
+        setCompanyLogo(null);
+        setTenantName(null);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [companyId]);
 
   useEffect(() => {
     if (lockoutTime > 0) {
@@ -185,8 +196,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
                   type="text" 
                   value={companyId}
                   onChange={(e) => setCompanyId(e.target.value)}
+                  disabled={isCompanyLocked}
                   placeholder="e.g. company-id"
-                  className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-600 focus:bg-white outline-none transition-all"
+                  className={`w-full bg-gray-50/50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-600 focus:bg-white outline-none transition-all ${isCompanyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                   required
                 />
               </div>

@@ -291,7 +291,6 @@ const App: React.FC = () => {
       if (user) {
         console.log("[APP] Login successful, updating state");
         localStorage.setItem('payroll_user', JSON.stringify(user));
-        localStorage.setItem('last_company_id', companyId);
         setAuthStatus({ isAuthenticated: true, user, loading: false });
         setAuthError(null);
         // After login, load tenant specific data
