@@ -1,20 +1,25 @@
 {
   "cleanUrls": true,
-  "trailingSlash": true,
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/payroll/",
-      "permanent": true
-    }
-  ],
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/payroll/assets/(.*)",
       "destination": "/assets/$1"
     },
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/payroll",
+      "destination": "/index.html"
+    },
+    {
       "source": "/payroll/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!assets|favicon.ico|src|api).*)",
       "destination": "/index.html"
     }
   ]
