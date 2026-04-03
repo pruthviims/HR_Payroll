@@ -7,11 +7,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/payroll/assets/(.*)",
-      "destination": "/assets/$1"
-    },
-    {
-      "source": "/((?!assets|favicon.ico|src|api).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
