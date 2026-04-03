@@ -118,7 +118,7 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({ employees: _emplo
     setSharingStatus({ ...sharingStatus, [user.username]: true });
 
     const slugifiedCompanyId = user.companyId || '';
-    const loginUrl = `${window.location.origin}/payroll/?companyId=${slugifiedCompanyId}`;
+    const loginUrl = `${window.location.origin}${window.location.pathname}?companyId=${slugifiedCompanyId}`;
     const subject = encodeURIComponent(`Your ${companyName || 'HR Portal'} Login Credentials`);
     const body = encodeURIComponent(
       `Hello ${user.name},\n\n` +

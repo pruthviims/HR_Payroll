@@ -96,7 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
       const user = await cloudApi.recoverPassword(slugifiedCompanyId, forgotEmail);
 
       if (user) {
-        const loginUrl = `${window.location.origin}/payroll/?companyId=${slugifiedCompanyId}`;
+        const loginUrl = `${window.location.origin}${window.location.pathname}?companyId=${slugifiedCompanyId}`;
         const subject = encodeURIComponent(`Account Recovery - Staff Access Portal`);
         const body = encodeURIComponent(
           `Hello ${user.name},\n\n` +

@@ -114,22 +114,12 @@ async function startServer() {
       console.log("[SERVER] Production mode: Serving static files from /dist...");
       const distPath = path.join(process.cwd(), 'dist');
       
-      // Serve static files from the subpath
-      app.use('/payroll', express.static(distPath));
+      // Serve static files from the root
+      app.use(express.static(distPath));
 
-      // Handle SPA routing for the subpath
-      app.get('/payroll/*', (req, res) => {
+      // Handle SPA routing for all paths
+      app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
-      });
-
-      // Fallback for subpath
-      app.get('/payroll', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
-      });
-
-      // Redirect root to /payroll
-      app.get('/', (req, res) => {
-        res.redirect('/payroll/');
       });
     }
 
