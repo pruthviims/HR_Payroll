@@ -61,7 +61,14 @@ export enum TabType {
   PAYSLIPS = 'payslips',
   INSIGHTS = 'insights',
   USERS = 'users',
-  TAX = 'tax'
+  TAX = 'tax',
+  CLIENTS = 'clients'
+}
+
+export interface Client {
+  name: string;
+  status: 'active' | 'suspended';
+  addedAt: string;
 }
 
 export interface AttendanceRecord {

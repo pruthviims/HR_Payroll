@@ -1,5 +1,5 @@
 import { supabase, isConfigured } from '../lib/supabase';
-import { EmployeeSalaryData, User, Role } from '../types';
+import { EmployeeSalaryData, User, Role, Client } from '../types';
 import bcrypt from 'bcryptjs';
 
 // Custom Auth State Management
@@ -193,7 +193,7 @@ export const supabaseApi = {
     if (error) throw error;
   },
 
-  async fetchEmployers(companyId: string): Promise<string[]> {
+  async fetchEmployers(companyId: string): Promise<Client[]> {
     try {
       const { data, error } = await Promise.race([
         supabase.from('payroll_records').select('data').eq('id', `${companyId}_employers`).maybeSingle(),
@@ -201,13 +201,27 @@ export const supabaseApi = {
       ]);
       
       if (error) return [];
-      return data?.data || [];
+      const rawData = (data?.data || []) as any[];
+      return rawData.map(item => {
+        if (typeof item === 'string') {
+          return { name: item, status: 'active', addedAt: new Date().toISOString() };
+        }
+        // Ensure status exists if it's an object, default to active if missing
+        if (item && typeof item === 'object') {
+          return {
+            ...item,
+            status: item.status || 'active',
+            addedAt: item.addedAt || new Date().toISOString()
+          } as Client;
+        }
+        return item as Client;
+      });
     } catch {
       return [];
     }
   },
 
-  async saveEmployers(companyId: string, employers: string[]): Promise<void> {
+  async saveEmployers(companyId: string, employers: Client[]): Promise<void> {
     const { error } = await supabase
       .from('payroll_records')
       .upsert({ id: `${companyId}_employers`, data: employers });

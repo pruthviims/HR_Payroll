@@ -23,12 +23,13 @@ import {
 } from 'lucide-react';
 import Papa from 'papaparse';
 import bcrypt from 'bcryptjs';
-import { EmployeeSalaryData, TabType, ColumnMapping, AuthState, SyncStatus, Role, FieldConfig } from './types';
+import { EmployeeSalaryData, TabType, ColumnMapping, AuthState, SyncStatus, Role, FieldConfig, Client } from './types';
 import { cloudApi } from './services/api';
 import HomeTab from './components/HomeTab';
 import { PayslipsTab } from './components/PayslipsTab';
 import { InsightsTab } from './components/InsightsTab';
 import { TaxTab } from './components/TaxTab';
+import { ClientManagementTab } from './components/ClientManagementTab';
 import UserManagementTab from './components/UserManagementTab';
 import Login from './components/Login';
 import { Setup } from './components/Setup';
@@ -74,11 +75,9 @@ const App: React.FC = () => {
   const [favicon, setFavicon] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ lastSynced: null, isSyncing: false, status: 'offline' });
   
-  const [employers, setEmployers] = useState<string[]>([]);
+  const [employers, setEmployers] = useState<Client[]>([]);
   const [selectedEmployer, setSelectedEmployer] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-  const [isAddEmployerOpen, setIsAddEmployerOpen] = useState(false);
-  const [newEmployerName, setNewEmployerName] = useState('');
 
   // Clear notifications when tab changes
   useEffect(() => {
@@ -139,20 +138,56 @@ const App: React.FC = () => {
       }
 
       console.log(`[DATA] Fetched ${employerList.length} employers:`, employerList);
-      setEmployers(employerList || []);
-      if (employerList.length > 0) {
-        setSelectedEmployer(employerList[0]);
-      } else {
-        setSelectedEmployer('');
-      }
+      const allEmployers = employerList || [];
+      setEmployers(allEmployers);
+      
+      const activeEmployers = allEmployers.filter(e => e.status === 'active');
+      console.log(`[DATA] Active employers:`, activeEmployers.map(e => e.name));
+      
+      // Preserve selection if it's still active, otherwise pick first active
+      setSelectedEmployer(prev => {
+        const stillActive = activeEmployers.find(e => e.name === prev);
+        if (stillActive) return prev;
+        return activeEmployers.length > 0 ? activeEmployers[0].name : '';
+      });
 
       if (cloudConfigs) setFieldConfigs(cloudConfigs);
 
       console.log(`[DATA] Fetched ${data.length} employees`);
-      setEmployees(data || []);
+      const allEmployees = data || [];
+      setEmployees(allEmployees);
       
-      if (data.length > 0) {
-        const periods = Array.from(new Set(data.map(e => `${e.month}-${e.year}`))).sort().reverse();
+      // Sync employers from employee data if any are missing
+      const uniqueEmployersFromData = Array.from(new Set(allEmployees.map(e => e.principalEmployer))).filter(Boolean);
+      let finalEmployers = [...allEmployers];
+      let needsEmployerUpdate = false;
+      
+      uniqueEmployersFromData.forEach(name => {
+        if (!finalEmployers.find(e => e.name === name)) {
+          finalEmployers.push({
+            name: name as string,
+            status: 'active',
+            addedAt: new Date().toISOString()
+          });
+          needsEmployerUpdate = true;
+        }
+      });
+      
+      if (needsEmployerUpdate) {
+        setEmployers(finalEmployers);
+        await cloudApi.saveEmployers(companyId, finalEmployers);
+        
+        // Re-calculate active employers after sync
+        const newActive = finalEmployers.filter(e => e.status === 'active');
+        setSelectedEmployer(prev => {
+          const stillActive = newActive.find(e => e.name === prev);
+          if (stillActive) return prev;
+          return newActive.length > 0 ? newActive[0].name : '';
+        });
+      }
+      
+      if (allEmployees.length > 0) {
+        const periods = Array.from(new Set(allEmployees.map(e => `${e.month}-${e.year}`))).sort().reverse();
         if (periods.length > 0) setSelectedPeriod(periods[0]);
       }
       
@@ -352,19 +387,48 @@ const App: React.FC = () => {
     }
   }, [authStatus.isAuthenticated, loadFromCloud]);
 
-  const handleAddEmployer = async () => {
-    if (!newEmployerName.trim() || !authStatus.user?.companyId) return;
+  const handleAddClient = async (name: string) => {
+    if (!name.trim() || !authStatus.user?.companyId) return;
     const companyId = authStatus.user.companyId;
     try {
-      const updated = [...employers, newEmployerName.trim()];
+      const newClient: Client = {
+        name: name.trim(),
+        status: 'active',
+        addedAt: new Date().toISOString()
+      };
+      const updated = [...employers, newClient];
       await cloudApi.saveEmployers(companyId, updated);
       setEmployers(updated);
-      setSelectedEmployer(newEmployerName.trim());
-      setNewEmployerName('');
-      setIsAddEmployerOpen(false);
+      setSelectedEmployer(newClient.name);
+      showNotification("Client added successfully", "success");
     } catch (err: any) {
-      console.error("Failed to add employer:", err);
-      setUploadError("Failed to add client. Please check your connection or permissions.");
+      console.error("Failed to add client:", err);
+      showNotification("Failed to add client", "error");
+    }
+  };
+
+  const handleToggleClientStatus = async (clientName: string) => {
+    if (!authStatus.user?.companyId) return;
+    const companyId = authStatus.user.companyId;
+    try {
+      const updated = employers.map(c => 
+        c.name === clientName 
+          ? { ...c, status: c.status === 'active' ? 'suspended' : 'active' } as Client
+          : c
+      );
+      await cloudApi.saveEmployers(companyId, updated);
+      setEmployers(updated);
+      
+      const toggledClient = updated.find(c => c.name === clientName);
+      if (toggledClient?.status === 'suspended' && selectedEmployer === clientName) {
+        const firstActive = updated.find(c => c.status === 'active');
+        setSelectedEmployer(firstActive ? firstActive.name : '');
+      }
+      
+      showNotification(`Client ${toggledClient?.status === 'active' ? 'activated' : 'suspended'} successfully`, "success");
+    } catch (err: any) {
+      console.error("Failed to toggle client status:", err);
+      showNotification("Failed to update client status", "error");
     }
   };
 
@@ -648,18 +712,19 @@ const App: React.FC = () => {
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Briefcase size={12} className="text-indigo-400" /> Active Client</label>
           <div className="flex gap-2">
             <select value={selectedEmployer} onChange={(e) => setSelectedEmployer(e.target.value)} className="flex-1 bg-indigo-50/50 border border-indigo-100 rounded-2xl px-4 py-3 text-xs font-black text-indigo-900 outline-none appearance-none">
-              {employers.map(e => <option key={e} value={e}>{e}</option>)}
+              {employers.filter(e => e.status === 'active').map(e => <option key={e.name} value={e.name}>{e.name}</option>)}
             </select>
             {isAdmin && (
-              <button onClick={() => setIsAddEmployerOpen(true)} className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg"><Plus size={16} /></button>
+              <button onClick={() => setActiveTab(TabType.CLIENTS)} className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg" title="Manage Clients"><Plus size={16} /></button>
             )}
           </div>
         </div>
 
-        <button onClick={() => setActiveTab(TabType.HOME)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.HOME ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><LayoutDashboard size={20} /><span>Payroll Audit</span></button>
-        <button onClick={() => setActiveTab(TabType.PAYSLIPS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.PAYSLIPS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><FileText size={20} /><span>Payslip Search</span></button>
-        {isAdmin && <button onClick={() => setActiveTab(TabType.TAX)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.TAX ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><Calculator size={20} /><span>Tax Audit</span></button>}
-        {isAdmin && <button onClick={() => setActiveTab(TabType.INSIGHTS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.INSIGHTS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><PieChart size={20} /><span>Statutory Insights</span></button>}
+        {isAdmin && <button onClick={() => setActiveTab(TabType.CLIENTS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.CLIENTS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><Briefcase size={20} /><span>Client Management</span></button>}
+        <button onClick={() => setActiveTab(TabType.HOME)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.HOME ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><LayoutDashboard size={20} /><span>Payroll Dashboard</span></button>
+        <button onClick={() => setActiveTab(TabType.PAYSLIPS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.PAYSLIPS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><FileText size={20} /><span>Payslips</span></button>
+        {isAdmin && <button onClick={() => setActiveTab(TabType.TAX)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.TAX ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><Calculator size={20} /><span>Statutory Compliance</span></button>}
+        {isAdmin && <button onClick={() => setActiveTab(TabType.INSIGHTS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.INSIGHTS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><PieChart size={20} /><span>Payroll Insights</span></button>}
         {isAdmin && <button onClick={() => setActiveTab(TabType.USERS)} className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === TabType.USERS ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}><UsersIcon size={20} /><span>User Accounts</span></button>}
 
         <div className="mt-auto pt-8 border-t border-gray-50">
@@ -784,6 +849,14 @@ const App: React.FC = () => {
               showNotification={showNotification} 
               currentUser={authStatus.user} 
               companyName={companyName}
+            />
+          )}
+          {activeTab === TabType.CLIENTS && isAdmin && (
+            <ClientManagementTab 
+              clients={employers}
+              onAddClient={handleAddClient}
+              onToggleStatus={handleToggleClientStatus}
+              isAdmin={isAdmin}
             />
           )}
         </div>
@@ -1051,39 +1124,6 @@ const App: React.FC = () => {
                 <Cloud size={20} />
                 <span>Process & Sync to Cloud</span>
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Employer Modal */}
-      {isAddEmployerOpen && (
-        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-md rounded-[40px] shadow-3xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">
-                <Building2 size={32} />
-              </div>
-              <h3 className="text-xl font-black text-gray-900 mb-2">Register New Client</h3>
-              <p className="text-sm text-gray-500 font-medium mb-8">Add a new principal employer to the consultancy roster</p>
-              
-              <div className="w-full space-y-4 mb-8">
-                <div className="text-left space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Employer Name</label>
-                  <input 
-                    type="text" 
-                    value={newEmployerName}
-                    onChange={(e) => setNewEmployerName(e.target.value)}
-                    placeholder="e.g. RELIANCE INDUSTRIES"
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-indigo-600 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 w-full">
-                <button onClick={() => setIsAddEmployerOpen(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 font-black rounded-2xl hover:bg-gray-200 transition-all uppercase tracking-widest text-xs">Cancel</button>
-                <button onClick={handleAddEmployer} className="flex-1 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs shadow-lg shadow-indigo-100">Add Client</button>
-              </div>
             </div>
           </div>
         </div>
