@@ -106,14 +106,14 @@ const drawPayslipOnDoc = (
   drawDetail('Employee Name', emp.name, leftColX, currentY);
   drawDetail('Employee ID', emp.id, rightColX, currentY);
   currentY += 7;
-  drawDetail('Designation', emp.grade || 'N/A', leftColX, currentY);
-  drawDetail('Department', 'N/A', rightColX, currentY);
+  drawDetail('Designation', emp.designation || emp.grade || 'N/A', leftColX, currentY);
+  drawDetail('Department', emp.department || 'N/A', rightColX, currentY);
   currentY += 7;
   drawDetail('ESI No', emp.esiNo, leftColX, currentY);
   drawDetail('UAN No', emp.uanNo, rightColX, currentY);
   currentY += 7;
-  drawDetail('Bank Name', 'N/A', leftColX, currentY);
-  drawDetail('Account No', 'N/A', rightColX, currentY);
+  drawDetail('Bank Name', emp.bankName || 'N/A', leftColX, currentY);
+  drawDetail('Account No', emp.accountNo || 'N/A', rightColX, currentY);
   currentY += 7;
   drawDetail('Worked Days', emp.workedDays, leftColX, currentY);
   drawDetail('OT Hours', emp.otHours, rightColX, currentY);
@@ -269,7 +269,7 @@ export const generateIndividualZippedPayslips = async (
   for (const emp of employees) {
     const doc = generateSinglePayslip(emp, logo, companyName, fieldConfigs, false, templateId);
     const pdfBlob = doc.output('blob');
-    zip.file(`Payslip_${emp.name}_${emp.id}.pdf`, pdfBlob);
+    zip.file(`Payslip_${emp.name}_${emp.month}_${emp.year}.pdf`, pdfBlob);
   }
   
   const content = await zip.generateAsync({ type: 'blob' });

@@ -51,6 +51,10 @@ export interface EmployeeSalaryData {
   displayDate: string;
   principalEmployer: string;
   grade?: string;
+  designation?: string;
+  department?: string;
+  bankName?: string;
+  accountNo?: string;
   extraEarnings?: { label: string; value: number }[];
   extraDeductions?: { label: string; value: number }[];
 }

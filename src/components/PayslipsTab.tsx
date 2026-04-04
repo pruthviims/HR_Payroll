@@ -182,6 +182,10 @@ export const PayslipsTab: React.FC<PayslipsTabProps> = ({ employees, companyLogo
               </div>
               <div className="flex items-center gap-4">
                  {companyLogo && <img src={companyLogo} alt="Logo" className="w-12 h-10 object-contain hidden sm:block" />}
+                 <button onClick={() => currentEmployee && generateSinglePayslip(currentEmployee, companyLogo, companyName, fieldConfigs, true, selectedTemplate)} className="px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-indigo-100 uppercase tracking-widest flex items-center gap-2">
+                   <Download size={14} />
+                   <span>Download PDF</span>
+                 </button>
                  <button onClick={() => previewPdfUri && window.open(previewPdfUri, '_blank')} className="px-4 py-2.5 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-xl border border-indigo-100 uppercase tracking-widest">Full Screen</button>
                  <button onClick={closePreview} className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-2xl transition-all"><X size={24} /></button>
               </div>

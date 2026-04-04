@@ -35,13 +35,17 @@ import Login from './components/Login';
 import { Setup } from './components/Setup';
 
 const FIELD_DEFINITIONS: FieldConfig[] = [
-  { key: 'id', label: 'EMPLOYEE ID', type: 'core', aliases: ['id', 'code', 'emp id', 'employee id', 'sl no'] },
   { key: 'name', label: 'EMPLOYEE NAME', type: 'core', aliases: ['name', 'employee name', 'emp name'] },
+  { key: 'id', label: 'EMPLOYEE ID', type: 'core', aliases: ['id', 'code', 'emp id', 'employee id', 'sl no'] },
+  { key: 'designation', label: 'DESIGNATION', type: 'core', aliases: ['designation', 'grade', 'role', 'desig'] },
+  { key: 'department', label: 'DEPARTMENT', type: 'core', aliases: ['department', 'dept', 'unit'] },
   { key: 'esiNo', label: 'ESI ACCOUNT', type: 'core', aliases: ['esi', 'esi no', 'esi account'] },
   { key: 'uanNo', label: 'UAN NUMBER', type: 'core', aliases: ['uan', 'uan no', 'uan number'] },
-  { key: 'totalDays', label: 'TOTAL PERIOD DAYS', type: 'core', aliases: ['total days', 'days in month', 'month days', 'no of days', 'period days'] },
+  { key: 'bankName', label: 'BANK NAME', type: 'core', aliases: ['bank', 'bank name', 'bank name'] },
+  { key: 'accountNo', label: 'ACCOUNT NO', type: 'core', aliases: ['account', 'account no', 'acc no', 'bank account'] },
   { key: 'workedDays', label: 'WORKED DAYS', type: 'core', aliases: ['worked days', 'present days', 'days worked', 'worked'] },
   { key: 'otHours', label: 'OT HOURS', type: 'core', aliases: ['ot hours', 'overtime hours', 'ot hrs'] },
+  { key: 'totalDays', label: 'TOTAL PERIOD DAYS', type: 'core', aliases: ['total days', 'days in month', 'month days', 'no of days', 'period days'] },
   { key: 'fixedGross', label: 'FIXED GROSS', type: 'core', aliases: ['fixed gross', 'gross salary', 'fixed salary'] },
   { key: 'basicDA', label: 'BASIC + DA', type: 'earning', aliases: ['basic', 'da', 'basic+da', 'basic da'] },
   { key: 'bonus', label: 'BONUS', type: 'earning', aliases: ['bonus'] },
@@ -621,8 +625,12 @@ const App: React.FC = () => {
         return {
           id: empId,
           name: empName,
+          designation: row[mapping.designation as keyof ColumnMapping] || '',
+          department: row[mapping.department as keyof ColumnMapping] || '',
           esiNo: cleanNumericString(row[mapping.esiNo as keyof ColumnMapping]),
           uanNo: cleanNumericString(row[mapping.uanNo as keyof ColumnMapping]),
+          bankName: row[mapping.bankName as keyof ColumnMapping] || '',
+          accountNo: cleanNumericString(row[mapping.accountNo as keyof ColumnMapping]),
           totalDays: totalDaysInMonth,
           workedDays: workedDays,
           otHours: otHours,
