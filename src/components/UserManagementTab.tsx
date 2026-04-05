@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Role, EmployeeSalaryData } from '../types';
 import { cloudApi } from '../services/api';
-import { UserPlus, RefreshCcw, Shield, Trash2, X, UserCheck, Send, Info, ShieldAlert } from 'lucide-react';
+import { UserPlus, RefreshCcw, Shield, Trash2, X, UserCheck, Send, Info, ShieldAlert, Lock } from 'lucide-react';
 
 interface UserManagementTabProps {
   employees: EmployeeSalaryData[];
@@ -16,6 +16,9 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({ employees: _emplo
   const [users, setUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [selectedUserForReset, setSelectedUserForReset] = useState<User | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [sharingStatus, setSharingStatus] = useState<Record<string, boolean>>({});
   
   // Form State
@@ -104,6 +107,27 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({ employees: _emplo
       }
     } catch (e) {
       console.error("Failed to remove all users", e);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForReset || !resetPasswordValue || !currentUser?.companyId) return;
+
+    try {
+      await cloudApi.updateUserPassword(currentUser.companyId, selectedUserForReset.username, resetPasswordValue);
+      if (showNotification) {
+        showNotification(`Password updated for ${selectedUserForReset.name}`, 'success');
+      }
+      setIsResetPasswordModalOpen(false);
+      setResetPasswordValue('');
+      setSelectedUserForReset(null);
+      loadUsers();
+    } catch (e) {
+      console.error("Failed to reset password", e);
+      if (showNotification) {
+        showNotification("Failed to update password. Please try again.", 'error');
+      }
     }
   };
 
@@ -215,6 +239,16 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({ employees: _emplo
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => {
+                          setSelectedUserForReset(u);
+                          setIsResetPasswordModalOpen(true);
+                        }}
+                        className="p-3 text-amber-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                        title="Reset Password"
+                      >
+                        <Lock size={18} />
+                      </button>
                       <button 
                         onClick={() => {
                           if (u.password?.startsWith('$2')) {
@@ -349,6 +383,82 @@ const UserManagementTab: React.FC<UserManagementTabProps> = ({ employees: _emplo
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isResetPasswordModalOpen && (
+        <div className="fixed inset-0 z-[110] bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-md rounded-[40px] shadow-3xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 bg-amber-500 text-white flex justify-between items-center">
+              <h3 className="text-xl font-black flex items-center gap-3"><Lock size={24}/> Reset Password</h3>
+              <button onClick={() => setIsResetPasswordModalOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors"><X size={24}/></button>
+            </div>
+            
+            <form onSubmit={handleResetPassword} className="p-8 space-y-6">
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                <p className="text-xs font-bold text-amber-800">
+                  Resetting password for: <span className="text-amber-900 underline">{selectedUserForReset?.name}</span>
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">New Password</label>
+                <div className="flex gap-2">
+                  <input 
+                    required 
+                    value={resetPasswordValue} 
+                    onChange={e => setResetPasswordValue(e.target.value)} 
+                    type="text" 
+                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-amber-500" 
+                    placeholder="Enter new password" 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+                      const pass = Array(10).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
+                      setResetPasswordValue(pass);
+                    }} 
+                    className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl hover:bg-amber-100 transition-colors"
+                  >
+                    <RefreshCcw size={18}/>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button type="submit" className="flex-1 py-4 bg-amber-500 text-white font-black rounded-2xl shadow-xl shadow-amber-100 hover:bg-amber-600 transition-all uppercase tracking-widest text-xs">
+                  Update Password
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!resetPasswordValue || !selectedUserForReset) return;
+                    
+                    const slugifiedCompanyId = selectedUserForReset.companyId || '';
+                    const loginUrl = `${window.location.origin}${window.location.pathname}?companyId=${slugifiedCompanyId}`;
+                    const subject = encodeURIComponent(`Your New ${companyName || 'HR Portal'} Password`);
+                    const body = encodeURIComponent(
+                      `Hello ${selectedUserForReset.name},\n\n` +
+                      `Your password for the ${companyName || 'HR Portal'} has been reset by the Administrator.\n\n` +
+                      `Company ID: ${slugifiedCompanyId}\n` +
+                      `Username: ${selectedUserForReset.username}\n` +
+                      `New Password: ${resetPasswordValue}\n\n` +
+                      `Login URL: ${loginUrl}\n\n` +
+                      `Please log in and change your password if required.\n\n` +
+                      `Regards,\n` +
+                      `Payroll Administration`
+                    );
+                    window.location.assign(`mailto:${selectedUserForReset.email}?subject=${subject}&body=${body}`);
+                  }}
+                  className="px-6 py-4 bg-amber-50 text-amber-600 font-black rounded-2xl border border-amber-100 hover:bg-amber-100 transition-all"
+                  title="Share new password via email"
+                >
+                  <Send size={18} />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

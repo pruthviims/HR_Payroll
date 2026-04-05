@@ -105,32 +105,39 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSetupClick, error }) => {
     try {
       const slugifiedCompanyId = forgotCompanyId.toLowerCase().trim().replace(/\s+/g, '_');
       const user = await cloudApi.recoverPassword(slugifiedCompanyId, forgotEmail);
+      const adminEmail = await cloudApi.fetchAdminEmail(slugifiedCompanyId);
 
-      if (user) {
+      if (user && adminEmail) {
         const loginUrl = `${window.location.origin}${window.location.pathname}?companyId=${slugifiedCompanyId}`;
-        const subject = encodeURIComponent(`Account Recovery - Staff Access Portal`);
+        const subject = encodeURIComponent(`Password Reset Request - ${user.name}`);
         const body = encodeURIComponent(
-          `Hello ${user.name},\n\n` +
-          `You requested account recovery for your HR Portal access.\n\n` +
-          `Company ID: ${slugifiedCompanyId}\n` +
-          `Username: ${user.username}\n\n` +
-          `SECURITY NOTICE: Your password is encrypted and cannot be recovered in plain text.\n` +
-          `Please contact your Payroll Administrator to have your password reset.\n\n` +
-          `Login URL: ${loginUrl}\n\n` +
+          `Hello Administrator,\n\n` +
+          `A password reset has been requested for the following user:\n\n` +
+          `Staff Name: ${user.name}\n` +
+          `Username: ${user.username}\n` +
+          `Email: ${user.email}\n` +
+          `Company ID: ${slugifiedCompanyId}\n\n` +
+          `Please log in to the User Management portal to reset this user's password.\n\n` +
+          `Portal URL: ${loginUrl}\n\n` +
           `Regards,\n` +
-          `System Administrator`
+          `System Security`
         );
 
-        // Open mail client to the user's email
-        window.location.assign(`mailto:${user.email}?subject=${subject}&body=${body}`);
+        // Open mail client to the ADMIN's email
+        window.location.assign(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
         
         setRecoveryMessage({ 
-          text: "Recovery request prepared. Please contact your administrator to reset your encrypted password.", 
+          text: "Reset request sent to the System Administrator. They will update your password shortly.", 
           type: 'success' 
+        });
+      } else if (!user) {
+        setRecoveryMessage({ 
+          text: "No account found with this email in the specified company.", 
+          type: 'error' 
         });
       } else {
         setRecoveryMessage({ 
-          text: "No account found with this email in the specified company.", 
+          text: "Administrator contact not found. Please contact support directly.", 
           type: 'error' 
         });
       }
