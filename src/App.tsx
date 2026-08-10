@@ -155,7 +155,16 @@ const App: React.FC = () => {
         return activeEmployers.length > 0 ? activeEmployers[0].name : '';
       });
 
-      if (cloudConfigs) setFieldConfigs(cloudConfigs);
+      //if (cloudConfigs) setFieldConfigs(cloudConfigs);
+      if (cloudConfigs) {
+        const merged = [...cloudConfigs];
+        FIELD_DEFINITIONS.forEach(def => {
+          if (!merged.find(f => f.key === def.key)) {
+            merged.push(def);
+          }
+        });
+        setFieldConfigs(merged);
+      }
 
       console.log(`[DATA] Fetched ${data.length} employees`);
       const allEmployees = data || [];
