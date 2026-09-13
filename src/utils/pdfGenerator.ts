@@ -5,17 +5,31 @@ import JSZip from 'jszip';
 import { EmployeeSalaryData, FieldConfig, PayslipTemplateId } from '../types';
 
 // Helper to draw a professional payslip on a jsPDF instance
+// const drawPayslipOnDoc = (
+//   doc: jsPDF,
+//   emp: EmployeeSalaryData,
+//   logo?: string,
+//   companyName?: string,
+//   _fieldConfigs: FieldConfig[] = [],
+//   templateId: PayslipTemplateId = PayslipTemplateId.CLASSIC
+// ) => {
+//   const margin = 15;
+//   const pageWidth = doc.internal.pageSize.width;
+//   let currentY = 15;
 const drawPayslipOnDoc = (
   doc: jsPDF,
   emp: EmployeeSalaryData,
   logo?: string,
   companyName?: string,
-  _fieldConfigs: FieldConfig[] = [],
+  fieldConfigs: FieldConfig[] = [],
   templateId: PayslipTemplateId = PayslipTemplateId.CLASSIC
 ) => {
+  // Look up the (possibly user-renamed) label for a field key, falling back
+  // to a default if the wizard config doesn't define it.
+  const getLabel = (key: string, fallback: string) =>
+    fieldConfigs.find(f => f.key === key)?.label || fallback;
+
   const margin = 15;
-  const pageWidth = doc.internal.pageSize.width;
-  let currentY = 15;
 
   // --- TEMPLATE CONFIGURATION ---
   const colors = {
@@ -136,14 +150,16 @@ const drawPayslipOnDoc = (
     ['BONUS', `INR ${formatCurrency(emp.bonus)}`, 'PT', `INR ${formatCurrency(emp.ptDeduction)}`],
     ['OT AMOUNT', `INR ${formatCurrency(emp.otAmount)}`, 'LWF', `INR ${formatCurrency(emp.lwfDeduction)}`],
     ['', '', 'CANTEEN', `INR ${formatCurrency(emp.canteenDeduction)}`],
-    ['', '', 'ADVANCE', `INR ${formatCurrency(emp.advance)}`],
+    // ['', '', 'ADVANCE', `INR ${formatCurrency(emp.advance)}`],
+    ['', '', getLabel('advance', 'ADVANCE'), `INR ${formatCurrency(emp.advance)}`],
   ] : [
     ['BASIC + DA', formatCurrency(emp.basicDA), 'ESI DEDUCTION', formatCurrency(emp.esiDeduction)],
     ['BONUS', formatCurrency(emp.bonus), 'PF DEDUCTION', formatCurrency(emp.pfDeduction)],
     ['OT AMOUNT', formatCurrency(emp.otAmount), 'PROF. TAX', formatCurrency(emp.ptDeduction)],
     ['ARREARS', formatCurrency(emp.arrears), 'LWF', formatCurrency(emp.lwfDeduction)],
     ['ATTENDANCE BONUS', formatCurrency(emp.attendanceBonus), 'CANTEEN', formatCurrency(emp.canteenDeduction)],
-    ['', '', 'ADVANCE', formatCurrency(emp.advance)],
+    // ['', '', 'ADVANCE', formatCurrency(emp.advance)],
+    ['', '', getLabel('advance', 'ADVANCE'), formatCurrency(emp.advance)],
     ['', '', 'OTHER DEDUCTION', formatCurrency(emp.otherDeduction)],
   ];
 
