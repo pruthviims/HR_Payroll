@@ -28,8 +28,9 @@ const drawPayslipOnDoc = (
   // to a default if the wizard config doesn't define it.
   const getLabel = (key: string, fallback: string) =>
     fieldConfigs.find(f => f.key === key)?.label || fallback;
-
   const margin = 15;
+  const pageWidth = doc.internal.pageSize.width;
+  let currentY = 15;
 
   // --- TEMPLATE CONFIGURATION ---
   const colors = {
